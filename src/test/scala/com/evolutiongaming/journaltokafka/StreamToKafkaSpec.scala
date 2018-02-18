@@ -2,11 +2,10 @@ package com.evolutiongaming.journaltokafka
 
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import com.evolutiongaming.concurrent.CurrentThreadExecutionContext
-import com.evolutiongaming.skafka.producer.Producer
+import com.evolutiongaming.skafka.producer.{Producer, ToBytes}
 import org.scalatest.{FunSuite, Matchers}
 
 import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
 import scala.util.Success
 
 class StreamToKafkaSpec extends FunSuite with Matchers {
@@ -16,16 +15,17 @@ class StreamToKafkaSpec extends FunSuite with Matchers {
 
     var records = List.empty[Producer.Record[String, PersistentRepr]]
 
-    val producer = new Producer[String, PersistentRepr] {
-      def send(record: Producer.Record[String, PersistentRepr]) = {
-        records = record :: records
+    val producer = new Producer.Send {
+      def doApply[K, V](record: Producer.Record[K, V])
+        (implicit valueToBytes: ToBytes[V], keyToBytes: ToBytes[K]) = {
+        val persistentRepr = record.asInstanceOf[Producer.Record[String, PersistentRepr]]
+        records = persistentRepr :: records
         val metadata = Producer.RecordMetadata(record.topic, 0)
         Future.successful(metadata)
       }
-      def flush() = Future.successful(())
-      def close() = {}
-      def closeAsync(timeout: FiniteDuration) = Future.successful(())
     }
+
+    implicit val valueToBytes = ToBytes.empty[PersistentRepr]
 
     val streamToKafka = StreamToKafka(producer, PartialFunction.condOpt(_) { case "id1" => "topic" })
 
