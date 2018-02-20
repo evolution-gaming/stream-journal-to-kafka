@@ -36,7 +36,7 @@ resolvers += Resolver.bintrayRepo("evolutiongaming", "maven")
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-persistence" % "2.5.9",
   "com.evolutiongaming" %% "executor-tools" % "1.0.0" % Test,
-  "com.evolutiongaming" %% "skafka-api" % "0.2.5",
+  "com.evolutiongaming" %% "skafka-api" % "0.2.6",
   "org.scalatest" %% "scalatest" % "3.0.5" % Test)
 
 licenses := Seq(("MIT", url("https://opensource.org/licenses/MIT")))
