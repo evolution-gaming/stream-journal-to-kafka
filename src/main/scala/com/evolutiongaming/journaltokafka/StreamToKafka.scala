@@ -4,8 +4,8 @@ import akka.actor.ActorSystem
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.SerializationExtension
 import com.evolutiongaming.concurrent.FutureHelper._
-import com.evolutiongaming.skafka.producer.Producer.Record
-import com.evolutiongaming.skafka.producer.{Producer, ToBytes}
+import com.evolutiongaming.skafka.producer.{Producer, ProducerRecord}
+import com.evolutiongaming.skafka.{ToBytes, Topic}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,7 +36,7 @@ object StreamToKafka {
           atomicWrite <- messages
           persistentRepr <- atomicWrite.payload
         } yield {
-          val record = Record(topic = topic, value = persistentRepr, key = Some(persistenceId))
+          val record = ProducerRecord(topic = topic, value = persistentRepr, key = Some(persistenceId))
           producer(record)
         }
         Future.foldUnit(result)
@@ -47,7 +47,7 @@ object StreamToKafka {
   def apply(producer: Producer.Send, topic: PersistenceId => Option[String], system: ActorSystem): StreamToKafka = {
     val serialization = SerializationExtension(system)
     val toBytes = new ToBytes[PersistentRepr] {
-      def apply(value: PersistentRepr) = {
+      def apply(value: PersistentRepr, topic: Topic) = {
         try serialization.serialize(value).get catch {
           case NonFatal(failure) => throw new RuntimeException(s"Failed to serialize $value", failure)
         }

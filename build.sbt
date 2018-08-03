@@ -36,7 +36,7 @@ resolvers += Resolver.bintrayRepo("evolutiongaming", "maven")
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-persistence" % "2.5.14",
   "com.evolutiongaming" %% "executor-tools" % "1.0.0" % Test,
-  "com.evolutiongaming" %% "skafka-api" % "0.2.11",
+  "com.evolutiongaming" %% "skafka-api" % "1.0.0",
   "com.evolutiongaming" %% "future-helper" % "1.0.2",
   "org.scalatest" %% "scalatest" % "3.0.5" % Test)
 

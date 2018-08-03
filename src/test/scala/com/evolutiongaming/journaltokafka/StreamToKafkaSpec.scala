@@ -2,7 +2,8 @@ package com.evolutiongaming.journaltokafka
 
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import com.evolutiongaming.concurrent.CurrentThreadExecutionContext
-import com.evolutiongaming.skafka.producer.{Producer, ToBytes}
+import com.evolutiongaming.skafka.producer.{Producer, ProducerRecord, RecordMetadata}
+import com.evolutiongaming.skafka.{ToBytes, TopicPartition}
 import org.scalatest.{FunSuite, Matchers}
 
 import scala.concurrent.Future
@@ -13,14 +14,15 @@ class StreamToKafkaSpec extends FunSuite with Matchers {
   test("apply") {
     implicit val ec = CurrentThreadExecutionContext
 
-    var records = List.empty[Producer.Record[String, PersistentRepr]]
+    var records = List.empty[ProducerRecord[String, PersistentRepr]]
 
     val producer = new Producer.Send {
-      def doApply[K, V](record: Producer.Record[K, V])
+      def doApply[K, V](record: ProducerRecord[K, V])
         (implicit valueToBytes: ToBytes[V], keyToBytes: ToBytes[K]) = {
-        val persistentRepr = record.asInstanceOf[Producer.Record[String, PersistentRepr]]
+        val persistentRepr = record.asInstanceOf[ProducerRecord[String, PersistentRepr]]
         records = persistentRepr :: records
-        val metadata = Producer.RecordMetadata(record.topic, 0)
+        val topicPartition = TopicPartition(record.topic, 0)
+        val metadata = RecordMetadata(topicPartition)
         Future.successful(metadata)
       }
     }
