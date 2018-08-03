@@ -3,6 +3,7 @@ package com.evolutiongaming.journaltokafka
 import akka.actor.ActorSystem
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.SerializationExtension
+import com.evolutiongaming.concurrent.FutureHelper._
 import com.evolutiongaming.skafka.producer.Producer.Record
 import com.evolutiongaming.skafka.producer.{Producer, ToBytes}
 
@@ -20,11 +21,8 @@ object StreamToKafka {
 
   type PersistenceId = String
 
-  lazy val Empty: StreamToKafka = {
-    val futureUnit = Future.successful(())
-    new StreamToKafka {
-      def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]) = futureUnit
-    }
+  lazy val Empty: StreamToKafka = new StreamToKafka {
+    def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]) = Future.unit
   }
 
   def apply(producer: Producer.Send, topic: PersistenceId => Option[String])
@@ -41,7 +39,7 @@ object StreamToKafka {
           val record = Record(topic = topic, value = persistentRepr, key = Some(persistenceId))
           producer(record)
         }
-        Future.sequence(result) map { _ => () }
+        Future.foldUnit(result)
       }
     }
   }
