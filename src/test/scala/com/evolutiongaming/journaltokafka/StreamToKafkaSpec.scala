@@ -1,7 +1,6 @@
 package com.evolutiongaming.journaltokafka
 
 import akka.persistence.{AtomicWrite, PersistentRepr}
-import com.evolutiongaming.concurrent.CurrentThreadExecutionContext
 import com.evolutiongaming.skafka.producer.{Producer, ProducerRecord, RecordMetadata}
 import com.evolutiongaming.skafka.{ToBytes, TopicPartition}
 import org.scalatest.{FunSuite, Matchers}
@@ -12,8 +11,6 @@ import scala.util.Success
 class StreamToKafkaSpec extends FunSuite with Matchers {
 
   test("apply") {
-    implicit val ec = CurrentThreadExecutionContext
-
     var records = List.empty[ProducerRecord[String, PersistentRepr]]
 
     val producer = new Producer.Send {

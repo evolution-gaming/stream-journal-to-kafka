@@ -8,7 +8,7 @@ import com.evolutiongaming.skafka.producer.{Producer, ProducerRecord}
 import com.evolutiongaming.skafka.{ToBytes, Topic}
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 trait StreamToKafka {
@@ -26,7 +26,7 @@ object StreamToKafka {
   }
 
   def apply(producer: Producer.Send, topic: PersistenceId => Option[String])
-    (implicit ec: ExecutionContext, toBytes: ToBytes[PersistentRepr]): StreamToKafka = {
+    (implicit toBytes: ToBytes[PersistentRepr]): StreamToKafka = {
 
     new StreamToKafka {
       def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]): Future[Unit] = {
@@ -53,6 +53,6 @@ object StreamToKafka {
         }
       }
     }
-    apply(producer, topic)(system.dispatcher, toBytes)
+    apply(producer, topic)(toBytes)
   }
 }
