@@ -36,7 +36,7 @@ object StreamToKafka {
           atomicWrite <- messages
           persistentRepr <- atomicWrite.payload
         } yield {
-          val record = ProducerRecord(topic = topic, value = persistentRepr, key = Some(persistenceId))
+          val record = ProducerRecord(topic = topic, value = persistentRepr, key = persistenceId)
           producer(record)
         }
         Future.foldUnit(result)

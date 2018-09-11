@@ -34,9 +34,9 @@ scalacOptions in (Compile,doc) ++= Seq("-groups", "-implicits", "-no-link-warnin
 resolvers += Resolver.bintrayRepo("evolutiongaming", "maven")
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-persistence" % "2.5.14",
+  "com.typesafe.akka" %% "akka-persistence" % "2.5.16",
   "com.evolutiongaming" %% "executor-tools" % "1.0.1" % Test,
-  "com.evolutiongaming" %% "skafka-api" % "1.2.0",
+  "com.evolutiongaming" %% "skafka" % "2.0.1",
   "com.evolutiongaming" %% "future-helper" % "1.0.3",
   "org.scalatest" %% "scalatest" % "3.0.5" % Test)
 
