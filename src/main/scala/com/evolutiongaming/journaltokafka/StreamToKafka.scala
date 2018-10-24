@@ -25,7 +25,7 @@ object StreamToKafka {
     def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]) = Future.unit
   }
 
-  def apply(producer: Producer.Send, topic: PersistenceId => Option[String])
+  def apply(producer: Producer.Send[Future], topic: PersistenceId => Option[String])
     (implicit toBytes: ToBytes[PersistentRepr]): StreamToKafka = {
 
     new StreamToKafka {
@@ -44,7 +44,7 @@ object StreamToKafka {
     }
   }
 
-  def apply(producer: Producer.Send, topic: PersistenceId => Option[String], system: ActorSystem): StreamToKafka = {
+  def apply(producer: Producer.Send[Future], topic: PersistenceId => Option[String], system: ActorSystem): StreamToKafka = {
     val serialization = SerializationExtension(system)
     val toBytes = new ToBytes[PersistentRepr] {
       def apply(value: PersistentRepr, topic: Topic) = {
