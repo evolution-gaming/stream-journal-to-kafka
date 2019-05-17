@@ -6,5 +6,5 @@
 ```scala
 resolvers += Resolver.bintrayRepo("evolutiongaming", "maven")
 
-libraryDependencies += "com.evolutiongaming" %% "stream-journal-to-kafka" % "0.0.1"
+libraryDependencies += "com.evolutiongaming" %% "stream-journal-to-kafka" % "1.0.4"
 ```

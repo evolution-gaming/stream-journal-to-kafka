@@ -8,7 +8,7 @@ import com.evolutiongaming.skafka.producer.{Producer, ProducerRecord}
 import com.evolutiongaming.skafka.{ToBytes, Topic}
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 trait StreamToKafka {
@@ -21,12 +21,16 @@ object StreamToKafka {
 
   type PersistenceId = String
 
-  lazy val Empty: StreamToKafka = new StreamToKafka {
+  val Empty: StreamToKafka = new StreamToKafka {
     def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]) = Future.unit
   }
 
-  def apply(producer: Producer.Send[Future], topic: PersistenceId => Option[String])
-    (implicit toBytes: ToBytes[PersistentRepr]): StreamToKafka = {
+  def apply(
+    producer: Producer.Send[Future],
+    topic: PersistenceId => Option[String])(implicit
+    toBytes: ToBytes[PersistentRepr],
+    executor: ExecutionContext
+  ): StreamToKafka = {
 
     new StreamToKafka {
       def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]): Future[Unit] = {
@@ -39,13 +43,20 @@ object StreamToKafka {
           val record = ProducerRecord(topic = topic, value = persistentRepr, key = persistenceId)
           producer(record)
         }
-        Future.foldUnit(result)
+        Future.foldUnit1(result)
       }
     }
   }
 
-  def apply(producer: Producer.Send[Future], topic: PersistenceId => Option[String], system: ActorSystem): StreamToKafka = {
+  def apply(
+    producer: Producer.Send[Future],
+    topic: PersistenceId => Option[String],
+    system: ActorSystem,
+    executor: ExecutionContext
+  ): StreamToKafka = {
+
     val serialization = SerializationExtension(system)
+    
     val toBytes = new ToBytes[PersistentRepr] {
       def apply(value: PersistentRepr, topic: Topic) = {
         try serialization.serialize(value).get catch {
@@ -53,6 +64,6 @@ object StreamToKafka {
         }
       }
     }
-    apply(producer, topic)(toBytes)
+    apply(producer, topic)(toBytes, executor)
   }
 }

@@ -1,6 +1,7 @@
 package com.evolutiongaming.journaltokafka
 
 import akka.persistence.{AtomicWrite, PersistentRepr}
+import com.evolutiongaming.concurrent.CurrentThreadExecutionContext
 import com.evolutiongaming.skafka.producer.{Producer, ProducerRecord, RecordMetadata}
 import com.evolutiongaming.skafka.{ToBytes, TopicPartition}
 import org.scalatest.{FunSuite, Matchers}
@@ -24,6 +25,8 @@ class StreamToKafkaSpec extends FunSuite with Matchers {
     }
 
     implicit val valueToBytes = ToBytes.empty[PersistentRepr]
+
+    implicit val executor = CurrentThreadExecutionContext
 
     val streamToKafka = StreamToKafka(producer, PartialFunction.condOpt(_) { case "id1" => "topic" })
 
