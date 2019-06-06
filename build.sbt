@@ -19,9 +19,9 @@ crossScalaVersions := Seq("2.12.8")
 resolvers += Resolver.bintrayRepo("evolutiongaming", "maven")
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka"      %% "akka-persistence"    % "2.5.22",
+  "com.typesafe.akka"      %% "akka-persistence"    % "2.5.23",
   "com.evolutiongaming"    %% "executor-tools"      % "1.0.1" % Test,
-  "com.evolutiongaming"    %% "skafka"              % "3.0.9",
+  "com.evolutiongaming"    %% "skafka"              % "4.0.4",
   "com.evolutiongaming"    %% "future-helper"       % "1.0.5",
   "org.scala-lang.modules" %% "scala-java8-compat"  % "0.9.0",
   "org.scalatest"          %% "scalatest"           % "3.0.7" % Test)

@@ -3,67 +3,91 @@ package com.evolutiongaming.journaltokafka
 import akka.actor.ActorSystem
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.SerializationExtension
-import com.evolutiongaming.concurrent.FutureHelper._
+import cats.effect.Sync
+import cats.implicits._
+import cats.{Applicative, Monad, ~>}
 import com.evolutiongaming.skafka.producer.{Producer, ProducerRecord}
 import com.evolutiongaming.skafka.{ToBytes, Topic}
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
-trait StreamToKafka {
+trait StreamToKafka[F[_]] {
   import StreamToKafka._
 
-  def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]): Future[Unit]
+  def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]): F[Unit]
 }
 
 object StreamToKafka {
 
   type PersistenceId = String
 
-  val Empty: StreamToKafka = new StreamToKafka {
-    def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]) = Future.unit
+  def empty[F[_] : Applicative]: StreamToKafka[F] = const(().pure[F])
+
+  def const[F[_]](unit: F[Unit]): StreamToKafka[F] = new StreamToKafka[F] {
+    def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]) = unit
   }
 
-  def apply(
-    producer: Producer.Send[Future],
-    topic: PersistenceId => Option[String])(implicit
+
+  def apply[F[_] : Monad](
+    send: Producer.Send[F],
+    topic: PersistenceId => Option[String],
     toBytes: ToBytes[PersistentRepr],
-    executor: ExecutionContext
-  ): StreamToKafka = {
+  ): StreamToKafka[F] = {
 
-    new StreamToKafka {
-      def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]): Future[Unit] = {
+    new StreamToKafka[F] {
+      def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]) = {
 
-        val result = for {
-          topic <- topic(persistenceId).toSeq
+        val sends = for {
+          topic <- topic(persistenceId).toList
           atomicWrite <- messages
           persistentRepr <- atomicWrite.payload
+          record = ProducerRecord(topic = topic, value = persistentRepr, key = persistenceId)
         } yield {
-          val record = ProducerRecord(topic = topic, value = persistentRepr, key = persistenceId)
-          producer(record)
+          send(record)(implicitly[ToBytes[String]], toBytes)
         }
-        Future.foldUnit1(result)
+
+        def fold[A](fa: List[F[A]]): F[List[A]] = {
+          for {
+            as <- fa.foldLeftM(List.empty[A]) { (as, fa) => for {a <- fa} yield a :: as }
+          } yield {
+            as.reverse
+          }
+        }
+
+        for {
+          a <- fold(sends)
+          _ <- fold(a)
+        } yield {}
       }
     }
   }
 
-  def apply(
-    producer: Producer.Send[Future],
+  def of[F[_] : Sync](
+    producer: Producer.Send[F],
     topic: PersistenceId => Option[String],
     system: ActorSystem,
-    executor: ExecutionContext
-  ): StreamToKafka = {
+  ): F[StreamToKafka[F]] = {
 
-    val serialization = SerializationExtension(system)
-    
-    val toBytes = new ToBytes[PersistentRepr] {
-      def apply(value: PersistentRepr, topic: Topic) = {
-        try serialization.serialize(value).get catch {
-          case NonFatal(failure) => throw new RuntimeException(s"Failed to serialize $value", failure)
+    for {
+      serialization <- Sync[F].delay { SerializationExtension(system) }
+    } yield {
+      val toBytes = new ToBytes[PersistentRepr] {
+        def apply(value: PersistentRepr, topic: Topic) = {
+          try serialization.serialize(value).get catch {
+            case NonFatal(error) => throw new RuntimeException(s"Failed to serialize $value", error)
+          }
         }
       }
+      apply[F](producer, topic, toBytes)
     }
-    apply(producer, topic)(toBytes, executor)
+  }
+
+
+  implicit class StreamToKafkaOps[F[_]](val self: StreamToKafka[F]) extends AnyVal {
+
+    def mapK[G[_]](f: F ~> G): StreamToKafka[G] = new StreamToKafka[G] {
+      def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]) = f(self(persistenceId, messages))
+    }
   }
 }

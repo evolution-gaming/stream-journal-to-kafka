@@ -12,9 +12,10 @@ trait StreamToKafkaJournal extends AsyncWriteJournal {
 
   private lazy val streamToKafka = newStreamToKafka()
 
-  def newStreamToKafka(): Option[StreamToKafka]
+  def newStreamToKafka(): Option[StreamToKafka[Future]]
 
   abstract override def asyncWriteMessages(messages: Seq[AtomicWrite]): Future[Seq[Try[Unit]]] = {
+
     val result = super.asyncWriteMessages(messages)
 
     val resultWithStream = for {
