@@ -6,7 +6,7 @@ import akka.serialization.SerializationExtension
 import cats.effect.Sync
 import cats.implicits._
 import cats.{Applicative, Monad, ~>}
-import com.evolutiongaming.skafka.producer.{Producer, ProducerRecord}
+import com.evolutiongaming.skafka.producer.{Producer, ProducerRecord, RecordMetadata}
 import com.evolutiongaming.skafka.{ToBytes, Topic}
 
 import scala.collection.immutable.Seq
@@ -31,18 +31,18 @@ object StreamToKafka {
 
   def apply[F[_] : Monad](
     send: Producer.Send[F],
-    topic: PersistenceId => Option[String],
+    topic: PersistenceId => F[Option[String]],
     toBytes: ToBytes[PersistentRepr],
   ): StreamToKafka[F] = {
 
     new StreamToKafka[F] {
       def apply(persistenceId: PersistenceId, messages: Seq[AtomicWrite]) = {
 
-        val sends = for {
-          topic <- topic(persistenceId).toList
-          atomicWrite <- messages
+        def sends(topic: Option[String]): List[F[F[RecordMetadata]]] = for {
+          topic          <- topic.toList
+          atomicWrite    <- messages
           persistentRepr <- atomicWrite.payload
-          record = ProducerRecord(topic = topic, value = persistentRepr, key = persistenceId)
+          record          = ProducerRecord(topic = topic, value = persistentRepr, key = persistenceId)
         } yield {
           send(record)(implicitly[ToBytes[String]], toBytes)
         }
@@ -56,8 +56,9 @@ object StreamToKafka {
         }
 
         for {
-          a <- fold(sends)
-          _ <- fold(a)
+          topic  <- topic(persistenceId)
+          bocks  <- fold(sends(topic))
+          _      <- fold(bocks)
         } yield {}
       }
     }
@@ -65,7 +66,7 @@ object StreamToKafka {
 
   def of[F[_] : Sync](
     producer: Producer.Send[F],
-    topic: PersistenceId => Option[String],
+    topic: PersistenceId => F[Option[String]],
     system: ActorSystem,
   ): F[StreamToKafka[F]] = {
 

@@ -24,7 +24,7 @@ libraryDependencies ++= Seq(
   "com.evolutiongaming"    %% "skafka"              % "4.0.4",
   "com.evolutiongaming"    %% "future-helper"       % "1.0.5",
   "org.scala-lang.modules" %% "scala-java8-compat"  % "0.9.0",
-  "org.scalatest"          %% "scalatest"           % "3.0.7" % Test)
+  "org.scalatest"          %% "scalatest"           % "3.0.8" % Test)
 
 licenses := Seq(("MIT", url("https://opensource.org/licenses/MIT")))
 

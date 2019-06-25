@@ -14,13 +14,14 @@ trait StreamToKafkaJournal extends AsyncWriteJournal {
 
   def newStreamToKafka(): Option[StreamToKafka[Future]]
 
+
   abstract override def asyncWriteMessages(messages: Seq[AtomicWrite]): Future[Seq[Try[Unit]]] = {
 
     val result = super.asyncWriteMessages(messages)
 
     val resultWithStream = for {
       streamToKafka <- streamToKafka
-      message <- messages.headOption
+      message       <- messages.headOption
     } yield for {
       result <- result
     } yield {
