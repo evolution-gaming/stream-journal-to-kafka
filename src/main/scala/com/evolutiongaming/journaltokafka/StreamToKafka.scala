@@ -6,11 +6,12 @@ import akka.serialization.SerializationExtension
 import cats.effect.Sync
 import cats.implicits._
 import cats.{Applicative, Monad, ~>}
+import com.evolutiongaming.catshelper.FromTry
 import com.evolutiongaming.skafka.producer.{Producer, ProducerRecord, RecordMetadata}
 import com.evolutiongaming.skafka.{ToBytes, Topic}
 
 import scala.collection.immutable.Seq
-import scala.util.control.NonFatal
+import scala.util.Failure
 
 trait StreamToKafka[F[_]] {
   import StreamToKafka._
@@ -29,10 +30,10 @@ object StreamToKafka {
   }
 
 
-  def apply[F[_] : Monad](
+  def apply[F[_] : Monad : FromTry](
     send: Producer.Send[F],
     topic: PersistenceId => F[Option[String]],
-    toBytes: ToBytes[PersistentRepr],
+    toBytes: ToBytes[F, PersistentRepr],
   ): StreamToKafka[F] = {
 
     new StreamToKafka[F] {
@@ -44,7 +45,7 @@ object StreamToKafka {
           persistentRepr <- atomicWrite.payload
           record          = ProducerRecord(topic = topic, value = persistentRepr, key = persistenceId)
         } yield {
-          send(record)(implicitly[ToBytes[String]], toBytes)
+          send(record)(implicitly[ToBytes[F, String]], toBytes)
         }
 
         def fold[A](fa: List[F[A]]): F[List[A]] = {
@@ -64,7 +65,7 @@ object StreamToKafka {
     }
   }
 
-  def of[F[_] : Sync](
+  def of[F[_] : Sync : FromTry](
     producer: Producer.Send[F],
     topic: PersistenceId => F[Option[String]],
     system: ActorSystem,
@@ -73,10 +74,12 @@ object StreamToKafka {
     for {
       serialization <- Sync[F].delay { SerializationExtension(system) }
     } yield {
-      val toBytes = new ToBytes[PersistentRepr] {
+      val toBytes = new ToBytes[F, PersistentRepr] {
         def apply(value: PersistentRepr, topic: Topic) = {
-          try serialization.serialize(value).get catch {
-            case NonFatal(error) => throw new RuntimeException(s"Failed to serialize $value", error)
+          FromTry[F].apply {
+            serialization.serialize(value).recoverWith { case error =>
+              Failure(new RuntimeException(s"Failed to serialize $value", error))
+            }
           }
         }
       }

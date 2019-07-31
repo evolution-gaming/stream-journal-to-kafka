@@ -12,7 +12,10 @@ class StreamToKafkaSpec extends FunSuite with Matchers {
     var records = List.empty[ProducerRecord[String, PersistentRepr]]
 
     val producer = new Producer.Send[Id] {
-      def apply[K: ToBytes, V: ToBytes](record: ProducerRecord[K, V]) = {
+      def apply[K, V](
+        record: ProducerRecord[K, V])(implicit
+        toBytesK: ToBytes[Id, K], toBytesV: ToBytes[Id, V]
+      ) = {
         val persistentRepr = record.asInstanceOf[ProducerRecord[String, PersistentRepr]]
         records = persistentRepr :: records
         val topicPartition = TopicPartition(record.topic, 0)
@@ -20,7 +23,7 @@ class StreamToKafkaSpec extends FunSuite with Matchers {
       }
     }
 
-    implicit val valueToBytes = ToBytes.empty[PersistentRepr]
+    implicit val valueToBytes = ToBytes.empty[Id, PersistentRepr]
 
     val streamToKafka = StreamToKafka[Id](producer, PartialFunction.condOpt(_) { case "id1" => "topic" }, valueToBytes)
 
