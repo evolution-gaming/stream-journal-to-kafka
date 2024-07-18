@@ -1,16 +1,15 @@
+
 name := "stream-journal-to-kafka"
 
 organization := "com.evolutiongaming"
 
-homepage := Some(new URL("http://github.com/evolution-gaming/stream-journal-to-kafka"))
+homepage := Some(url("https://github.com/evolution-gaming/stream-journal-to-kafka"))
 
 startYear := Some(2018)
 
-organizationName := "Evolution Gaming"
+organizationName := "Evolution"
 
-organizationHomepage := Some(url("http://evolutiongaming.com"))
-
-bintrayOrganization := Some("evolutiongaming")
+organizationHomepage := Some(url("https://evolution.com"))
 
 scalaVersion := crossScalaVersions.value.head
 
@@ -29,3 +28,9 @@ libraryDependencies ++= Seq(
 licenses := Seq(("MIT", url("https://opensource.org/licenses/MIT")))
 
 releaseCrossBuild := true
+
+publishTo := Some(Resolver.evolutionReleases)
+
+//addCommandAlias("check", "all versionPolicyCheck Compile/doc")
+addCommandAlias("check", "show version")
+addCommandAlias("build", "+all compile test")
